@@ -1,5 +1,6 @@
 package dev.roshin.pgp_analyzer.gui;
 
+import com.formdev.flatlaf.FlatDarculaLaf;
 import dev.roshin.pgp_analyzer.PGPAnalyzer;
 
 import javax.swing.*;
@@ -21,8 +22,23 @@ public class PGPAnalyzerGUI extends JFrame {
 
 
     public PGPAnalyzerGUI() {
+        // Set the look and feel
+        try {
+            UIManager.setLookAndFeel(new FlatDarculaLaf());
+        } catch (Exception ex) {
+            System.err.println("Failed to initialize FlatDarculaLaf. Falling back to system look and feel.");
+            try {
+                UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+            } catch (Exception e) {
+                // Handle exception if needed
+            }
+        }
+
+        // Enable window decorations provided by the look and feel
+        JFrame.setDefaultLookAndFeelDecorated(true);
+
         setTitle("PGP Analyzer");
-        setSize(600, 400);
+        setSize(700, 500);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         initComponents();

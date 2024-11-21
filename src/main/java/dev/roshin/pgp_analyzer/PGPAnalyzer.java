@@ -30,6 +30,9 @@ public class PGPAnalyzer {
                 e.printStackTrace();
             }
         } else {
+            System.setProperty("flatlaf.useWindowDecorations", "true");
+            System.setProperty("flatlaf.useNativeWindowDecorations", "true");
+
             // Launch GUI
             SwingUtilities.invokeLater(() -> {
                 new PGPAnalyzerGUI().setVisible(true);
