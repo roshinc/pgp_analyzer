@@ -2,6 +2,8 @@ package dev.roshin.pgp_analyzer;
 
 import org.bouncycastle.openpgp.*;
 import org.bouncycastle.openpgp.operator.bc.BcKeyFingerprintCalculator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedInputStream;
 import java.io.InputStream;
@@ -10,6 +12,8 @@ import java.nio.file.Paths;
 import java.util.Iterator;
 
 public class PGPAnalyzer {
+
+    private static Logger logger = LoggerFactory.getLogger(PGPAnalyzer.class);
 
     public static void main(String[] args) {
         if (args.length < 1) {
@@ -23,7 +27,7 @@ public class PGPAnalyzer {
         try {
             analyzeFile(filePath, ascKeyPath);
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Error occurred while analyzing the file.", e);
         }
     }
 
