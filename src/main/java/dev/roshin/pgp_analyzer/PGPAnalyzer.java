@@ -27,16 +27,14 @@ public class PGPAnalyzer {
             try {
                 analyzeFile(filePath, ascKeyPath, System.out);
             } catch (Exception e) {
-                e.printStackTrace();
+                logger.error("Error occurred while analyzing the file.", e);
             }
         } else {
             System.setProperty("flatlaf.useWindowDecorations", "true");
             System.setProperty("flatlaf.useNativeWindowDecorations", "true");
 
             // Launch GUI
-            SwingUtilities.invokeLater(() -> {
-                new PGPAnalyzerGUI().setVisible(true);
-            });
+            SwingUtilities.invokeLater(() -> new PGPAnalyzerGUI().setVisible(true));
         }
     }
 
