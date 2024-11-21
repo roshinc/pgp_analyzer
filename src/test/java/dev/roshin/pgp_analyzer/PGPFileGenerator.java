@@ -11,8 +11,13 @@ import org.bouncycastle.openpgp.operator.bc.*;
 import org.bouncycastle.openpgp.operator.jcajce.JcePGPDataEncryptorBuilder;
 import org.bouncycastle.openpgp.operator.jcajce.JcePublicKeyKeyEncryptionMethodGenerator;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.math.BigInteger;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.security.SecureRandom;
 import java.util.Date;
 
@@ -47,14 +52,14 @@ public class PGPFileGenerator {
         PGPPublicKeyRing publicKeyRing = keyRingGen.generatePublicKeyRing();
 
         // Write public key
-        try (OutputStream out = new FileOutputStream(outputPath + ".asc")) {
+        try (OutputStream out = Files.newOutputStream(Paths.get(outputPath + ".asc"))) {
             try (ArmoredOutputStream armOut = new ArmoredOutputStream(out)) {
                 publicKeyRing.encode(armOut);
             }
         }
 
         // Write private key
-        try (OutputStream out = new FileOutputStream(outputPath + ".sec")) {
+        try (OutputStream out = Files.newOutputStream(Paths.get(outputPath + ".sec"))) {
             try (ArmoredOutputStream armOut = new ArmoredOutputStream(out)) {
                 secretKeyRing.encode(armOut);
             }
@@ -75,7 +80,7 @@ public class PGPFileGenerator {
                 new BcPBESecretKeyDecryptorBuilder(new BcPGPDigestCalculatorProvider())
                         .build(signingKeyPassword));
 
-        try (OutputStream out = new FileOutputStream(outputFile)) {
+        try (OutputStream out = Files.newOutputStream(Paths.get(outputFile))) {
             PGPEncryptedDataGenerator encGen = new PGPEncryptedDataGenerator(
                     new JcePGPDataEncryptorBuilder(SymmetricKeyAlgorithmTags.AES_256)
                             .setWithIntegrityPacket(true)
@@ -97,7 +102,7 @@ public class PGPFileGenerator {
                     sigGen.init(PGPSignature.BINARY_DOCUMENT, pgpPrivKey);
 
                     PGPLiteralDataGenerator litGen = new PGPLiteralDataGenerator();
-                    try (InputStream in = new FileInputStream(inputFile);
+                    try (InputStream in = Files.newInputStream(Paths.get(inputFile));
                          OutputStream litOut = litGen.open(
                                  compOut,
                                  PGPLiteralData.BINARY,

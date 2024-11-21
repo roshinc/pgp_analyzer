@@ -77,6 +77,7 @@ public class PGPAnalyzer {
                 }
             } else if (object instanceof PGPLiteralData) {
                 // Literal data; actual content
+                logger.info("Found literal data in the file.");
             } else if (object instanceof PGPCompressedData) {
                 PGPCompressedData cData = (PGPCompressedData) object;
                 analyzeCompressedData(cData.getDataStream(), ascKeyPath);
@@ -119,6 +120,7 @@ public class PGPAnalyzer {
                 }
             } else if (object instanceof PGPLiteralData) {
                 // Reached actual content; no further action
+                logger.info("Reached actual content; no further action");
             } else if (object instanceof PGPCompressedData) {
                 // Handle nested compressed data
                 PGPCompressedData cData = (PGPCompressedData) object;
