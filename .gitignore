@@ -36,9 +36,10 @@ build/
 
 ### Mac OS ###
 .DS_Store
-/encrypted.gpg
-/encryption_key.asc
-/encryption_key.sec
+
+### Generated ###
+/*.gpg
+/*.sig
+/*.asc
 /sample.txt
-/signing_key.asc
-/signing_key.sec
+/*.sec
