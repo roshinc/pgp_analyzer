@@ -4,7 +4,6 @@ import org.bouncycastle.openpgp.*;
 import org.bouncycastle.openpgp.operator.bc.BcKeyFingerprintCalculator;
 
 import java.io.BufferedInputStream;
-import java.io.FileInputStream;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -144,7 +143,7 @@ public class PGPAnalyzer {
         } catch (PGPException e) {
             // If loading as public keys fails, try loading as secret keys
             keyIn.close();
-            keyIn = new BufferedInputStream(new FileInputStream(ascKeyPath));
+            keyIn = new BufferedInputStream(Files.newInputStream(Paths.get(ascKeyPath)));
             keyIn = PGPUtil.getDecoderStream(keyIn);
 
             try {
