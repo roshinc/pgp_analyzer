@@ -6,6 +6,8 @@ import org.bouncycastle.openpgp.operator.bc.BcKeyFingerprintCalculator;
 import java.io.BufferedInputStream;
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Iterator;
 
 public class PGPAnalyzer {
@@ -27,11 +29,11 @@ public class PGPAnalyzer {
     }
 
     public static void analyzeFile(String filePath, String ascKeyPath) throws Exception {
-        InputStream in = new BufferedInputStream(new FileInputStream(filePath));
+        InputStream in = new BufferedInputStream(Files.newInputStream(Paths.get(filePath)));
         in = PGPUtil.getDecoderStream(in);
 
         PGPObjectFactory pgpFactory = new PGPObjectFactory(in, new BcKeyFingerprintCalculator());
-        Object object = null;
+        Object object;
         boolean isEncrypted = false;
         boolean isSigned = false;
 
@@ -89,7 +91,7 @@ public class PGPAnalyzer {
 
     public static void analyzeCompressedData(InputStream compressedStream, String ascKeyPath) throws Exception {
         PGPObjectFactory pgpFactory = new PGPObjectFactory(compressedStream, new BcKeyFingerprintCalculator());
-        Object object = null;
+        Object object;
 
         while ((object = pgpFactory.nextObject()) != null) {
             if (object instanceof PGPOnePassSignatureList) {
@@ -125,7 +127,7 @@ public class PGPAnalyzer {
     }
 
     public static void checkKeyInKeyring(long keyID, String ascKeyPath) throws Exception {
-        InputStream keyIn = new BufferedInputStream(new FileInputStream(ascKeyPath));
+        InputStream keyIn = new BufferedInputStream(Files.newInputStream(Paths.get(ascKeyPath)));
         keyIn = PGPUtil.getDecoderStream(keyIn);
         boolean keyFound = false;
 
