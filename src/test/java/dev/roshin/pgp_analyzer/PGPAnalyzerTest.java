@@ -11,6 +11,16 @@ class PGPAnalyzerTest {
     }
 
     @Test
+    void analyzeFile_PlainFile() {
+        PGPAnalyzer.main(new String[]{"C:\\Github\\pgp_analyzer\\sample.txt"});
+    }
+
+    @Test
+    void analyzeFile_SignedOnlyFile() {
+        PGPAnalyzer.main(new String[]{"C:\\Github\\pgp_analyzer\\signed.sig", "C:\\Github\\pgp_analyzer\\signing_key.asc"});
+    }
+
+    @Test
     void analyzeCompressedData() {
     }
 
