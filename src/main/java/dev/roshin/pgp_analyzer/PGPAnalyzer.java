@@ -1,12 +1,15 @@
 package dev.roshin.pgp_analyzer;
 
+import dev.roshin.pgp_analyzer.gui.PGPAnalyzerGUI;
 import org.bouncycastle.openpgp.*;
 import org.bouncycastle.openpgp.operator.bc.BcKeyFingerprintCalculator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.swing.*;
 import java.io.BufferedInputStream;
 import java.io.InputStream;
+import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Iterator;
@@ -16,22 +19,25 @@ public class PGPAnalyzer {
     private static final Logger logger = LoggerFactory.getLogger(PGPAnalyzer.class);
 
     public static void main(String[] args) {
-        if (args.length < 1) {
-            System.out.println("Please provide the path to the file to analyze.");
-            return;
-        }
+        if (args.length > 0) {
+            // Run CLI version
+            String filePath = args[0];
+            String ascKeyPath = args.length > 1 ? args[1] : null;
 
-        String filePath = args[0];
-        String ascKeyPath = args.length > 1 ? args[1] : null;
-
-        try {
-            analyzeFile(filePath, ascKeyPath);
-        } catch (Exception e) {
-            logger.error("Error occurred while analyzing the file.", e);
+            try {
+                analyzeFile(filePath, ascKeyPath, System.out);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        } else {
+            // Launch GUI
+            SwingUtilities.invokeLater(() -> {
+                new PGPAnalyzerGUI().setVisible(true);
+            });
         }
     }
 
-    public static void analyzeFile(String filePath, String ascKeyPath) throws Exception {
+    public static void analyzeFile(String filePath, String ascKeyPath, PrintStream out) throws Exception {
         InputStream in = new BufferedInputStream(Files.newInputStream(Paths.get(filePath)));
         in = PGPUtil.getDecoderStream(in);
 
@@ -43,36 +49,36 @@ public class PGPAnalyzer {
         while ((object = pgpFactory.nextObject()) != null) {
             if (object instanceof PGPEncryptedDataList) {
                 isEncrypted = true;
-                System.out.println("The file is encrypted.");
+                out.println("The file is encrypted.");
                 PGPEncryptedDataList encList = (PGPEncryptedDataList) object;
                 Iterator<?> it = encList.getEncryptedDataObjects();
                 while (it.hasNext()) {
                     PGPPublicKeyEncryptedData encData = (PGPPublicKeyEncryptedData) it.next();
-                    System.out.printf("Requires key ID: 0x%016X for decryption.%n", encData.getKeyID());
+                    out.printf("Requires key ID: 0x%016X for decryption.%n", encData.getKeyID());
                     if (ascKeyPath != null) {
-                        checkKeyInKeyring(encData.getKeyID(), ascKeyPath);
+                        checkKeyInKeyring(encData.getKeyID(), ascKeyPath, out);
                     }
                 }
             } else if (object instanceof PGPOnePassSignatureList) {
                 isSigned = true;
-                System.out.println("The file contains a one-pass signature.");
+                out.println("The file contains a one-pass signature.");
                 PGPOnePassSignatureList opsList = (PGPOnePassSignatureList) object;
                 for (int i = 0; i < opsList.size(); i++) {
                     PGPOnePassSignature ops = opsList.get(i);
-                    System.out.printf("Signature requires key ID: 0x%016X for verification.%n", ops.getKeyID());
+                    out.printf("Signature requires key ID: 0x%016X for verification.%n", ops.getKeyID());
                     if (ascKeyPath != null) {
-                        checkKeyInKeyring(ops.getKeyID(), ascKeyPath);
+                        checkKeyInKeyring(ops.getKeyID(), ascKeyPath, out);
                     }
                 }
             } else if (object instanceof PGPSignatureList) {
                 isSigned = true;
-                System.out.println("The file contains signature(s).");
+                out.println("The file contains signature(s).");
                 PGPSignatureList sigList = (PGPSignatureList) object;
                 for (int i = 0; i < sigList.size(); i++) {
                     PGPSignature signature = sigList.get(i);
-                    System.out.printf("Signature requires key ID: 0x%016X for verification.%n", signature.getKeyID());
+                    out.printf("Signature requires key ID: 0x%016X for verification.%n", signature.getKeyID());
                     if (ascKeyPath != null) {
-                        checkKeyInKeyring(signature.getKeyID(), ascKeyPath);
+                        checkKeyInKeyring(signature.getKeyID(), ascKeyPath, out);
                     }
                 }
             } else if (object instanceof PGPLiteralData) {
@@ -80,42 +86,42 @@ public class PGPAnalyzer {
                 logger.info("Found literal data in the file.");
             } else if (object instanceof PGPCompressedData) {
                 PGPCompressedData cData = (PGPCompressedData) object;
-                analyzeCompressedData(cData.getDataStream(), ascKeyPath);
+                analyzeCompressedData(cData.getDataStream(), ascKeyPath, out);
             } else {
-                System.out.println("Encountered an unknown PGP object.");
+                out.println("Encountered an unknown PGP object.");
             }
         }
 
         if (!isEncrypted && !isSigned) {
-            System.out.println("The file is not encrypted or signed.");
+            out.println("The file is not encrypted or signed.");
         }
 
         in.close();
     }
 
-    public static void analyzeCompressedData(InputStream compressedStream, String ascKeyPath) throws Exception {
+    public static void analyzeCompressedData(InputStream compressedStream, String ascKeyPath, PrintStream out) throws Exception {
         PGPObjectFactory pgpFactory = new PGPObjectFactory(compressedStream, new BcKeyFingerprintCalculator());
         Object object;
 
         while ((object = pgpFactory.nextObject()) != null) {
             if (object instanceof PGPOnePassSignatureList) {
-                System.out.println("The compressed data contains a one-pass signature.");
+                out.println("The compressed data contains a one-pass signature.");
                 PGPOnePassSignatureList opsList = (PGPOnePassSignatureList) object;
                 for (int i = 0; i < opsList.size(); i++) {
                     PGPOnePassSignature ops = opsList.get(i);
-                    System.out.printf("Signature requires key ID: 0x%016X for verification.%n", ops.getKeyID());
+                    out.printf("Signature requires key ID: 0x%016X for verification.%n", ops.getKeyID());
                     if (ascKeyPath != null) {
-                        checkKeyInKeyring(ops.getKeyID(), ascKeyPath);
+                        checkKeyInKeyring(ops.getKeyID(), ascKeyPath, out);
                     }
                 }
             } else if (object instanceof PGPSignatureList) {
-                System.out.println("The compressed data contains signature(s).");
+                out.println("The compressed data contains signature(s).");
                 PGPSignatureList sigList = (PGPSignatureList) object;
                 for (int i = 0; i < sigList.size(); i++) {
                     PGPSignature signature = sigList.get(i);
-                    System.out.printf("Signature requires key ID: 0x%016X for verification.%n", signature.getKeyID());
+                    out.printf("Signature requires key ID: 0x%016X for verification.%n", signature.getKeyID());
                     if (ascKeyPath != null) {
-                        checkKeyInKeyring(signature.getKeyID(), ascKeyPath);
+                        checkKeyInKeyring(signature.getKeyID(), ascKeyPath, out);
                     }
                 }
             } else if (object instanceof PGPLiteralData) {
@@ -124,14 +130,14 @@ public class PGPAnalyzer {
             } else if (object instanceof PGPCompressedData) {
                 // Handle nested compressed data
                 PGPCompressedData cData = (PGPCompressedData) object;
-                analyzeCompressedData(cData.getDataStream(), ascKeyPath);
+                analyzeCompressedData(cData.getDataStream(), ascKeyPath, out);
             } else {
-                System.out.println("Encountered an unknown PGP object inside compressed data.");
+                out.println("Encountered an unknown PGP object inside compressed data.");
             }
         }
     }
 
-    public static void checkKeyInKeyring(long keyID, String ascKeyPath) throws Exception {
+    public static void checkKeyInKeyring(long keyID, String ascKeyPath, PrintStream out) throws Exception {
         InputStream keyIn = new BufferedInputStream(Files.newInputStream(Paths.get(ascKeyPath)));
         keyIn = PGPUtil.getDecoderStream(keyIn);
         boolean keyFound = false;
@@ -143,7 +149,7 @@ public class PGPAnalyzer {
 
             PGPPublicKey pubKey = pgpPubRingCollection.getPublicKey(keyID);
             if (pubKey != null) {
-                System.out.println("The required key is present in the provided ASC public key file.");
+                out.println("The required key is present in the provided ASC public key file.");
                 keyFound = true;
             }
         } catch (PGPException e) {
@@ -158,19 +164,19 @@ public class PGPAnalyzer {
 
                 PGPSecretKey secKey = pgpSecRingCollection.getSecretKey(keyID);
                 if (secKey != null) {
-                    System.out.println("The required key is present in the provided ASC secret key file.");
+                    out.println("The required key is present in the provided ASC secret key file.");
                     keyFound = true;
                 }
             } catch (PGPException ex) {
                 // The key file is neither public nor secret key ring collection
-                System.out.println("The provided ASC key file is neither a valid public nor secret key ring collection.");
+                out.println("The provided ASC key file is neither a valid public nor secret key ring collection.");
             }
         } finally {
             keyIn.close();
         }
 
         if (!keyFound) {
-            System.out.println("The required key is NOT present in the provided ASC key file.");
+            out.println("The required key is NOT present in the provided ASC key file.");
         }
     }
 
