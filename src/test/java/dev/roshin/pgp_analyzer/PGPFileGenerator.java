@@ -11,13 +11,8 @@ import org.bouncycastle.openpgp.operator.bc.*;
 import org.bouncycastle.openpgp.operator.jcajce.JcePGPDataEncryptorBuilder;
 import org.bouncycastle.openpgp.operator.jcajce.JcePublicKeyKeyEncryptionMethodGenerator;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
 import java.math.BigInteger;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.security.SecureRandom;
 import java.util.Date;
 
@@ -51,21 +46,52 @@ public class PGPFileGenerator {
         PGPSecretKeyRing secretKeyRing = keyRingGen.generateSecretKeyRing();
         PGPPublicKeyRing publicKeyRing = keyRingGen.generatePublicKeyRing();
 
-        // Write public key
-        try (OutputStream out = Files.newOutputStream(Paths.get(outputPath + ".asc"))) {
+        try (OutputStream out = new FileOutputStream(outputPath + ".asc")) {
             try (ArmoredOutputStream armOut = new ArmoredOutputStream(out)) {
                 publicKeyRing.encode(armOut);
             }
         }
 
-        // Write private key
-        try (OutputStream out = Files.newOutputStream(Paths.get(outputPath + ".sec"))) {
+        try (OutputStream out = new FileOutputStream(outputPath + ".sec")) {
             try (ArmoredOutputStream armOut = new ArmoredOutputStream(out)) {
                 secretKeyRing.encode(armOut);
             }
         }
 
         return new KeyPairInfo(secretKeyRing.getSecretKey(), publicKeyRing.getPublicKey());
+    }
+
+    public static void signFile(
+            String inputFile,
+            String outputFile,
+            PGPSecretKey signingKey,
+            char[] signingKeyPassword) throws Exception {
+
+        PGPPrivateKey pgpPrivKey = signingKey.extractPrivateKey(
+                new BcPBESecretKeyDecryptorBuilder(new BcPGPDigestCalculatorProvider())
+                        .build(signingKeyPassword));
+
+        try (OutputStream out = new FileOutputStream(outputFile)) {
+            try (ArmoredOutputStream armOut = new ArmoredOutputStream(out)) {
+                PGPSignatureGenerator sigGen = new PGPSignatureGenerator(
+                        new BcPGPContentSignerBuilder(
+                                signingKey.getPublicKey().getAlgorithm(),
+                                HashAlgorithmTags.SHA256
+                        )
+                );
+                sigGen.init(PGPSignature.BINARY_DOCUMENT, pgpPrivKey);
+
+                try (InputStream in = new FileInputStream(inputFile)) {
+                    byte[] buffer = new byte[1 << 16];
+                    int len;
+                    while ((len = in.read(buffer)) > 0) {
+                        sigGen.update(buffer, 0, len);
+                    }
+                }
+
+                sigGen.generate().encode(armOut);
+            }
+        }
     }
 
     public static void encryptAndSignFile(
@@ -75,12 +101,11 @@ public class PGPFileGenerator {
             PGPSecretKey signingKey,
             char[] signingKeyPassword) throws Exception {
 
-        // Get private key for signing
         PGPPrivateKey pgpPrivKey = signingKey.extractPrivateKey(
                 new BcPBESecretKeyDecryptorBuilder(new BcPGPDigestCalculatorProvider())
                         .build(signingKeyPassword));
 
-        try (OutputStream out = Files.newOutputStream(Paths.get(outputFile))) {
+        try (OutputStream out = new FileOutputStream(outputFile)) {
             PGPEncryptedDataGenerator encGen = new PGPEncryptedDataGenerator(
                     new JcePGPDataEncryptorBuilder(SymmetricKeyAlgorithmTags.AES_256)
                             .setWithIntegrityPacket(true)
@@ -102,7 +127,7 @@ public class PGPFileGenerator {
                     sigGen.init(PGPSignature.BINARY_DOCUMENT, pgpPrivKey);
 
                     PGPLiteralDataGenerator litGen = new PGPLiteralDataGenerator();
-                    try (InputStream in = Files.newInputStream(Paths.get(inputFile));
+                    try (InputStream in = new FileInputStream(inputFile);
                          OutputStream litOut = litGen.open(
                                  compOut,
                                  PGPLiteralData.BINARY,
@@ -138,11 +163,19 @@ public class PGPFileGenerator {
             writer.write("This is a test file to encrypt and sign");
         }
 
-        // Encrypt and sign the file
+        // Create encrypted and signed file
         encryptAndSignFile(
                 "sample.txt",
                 "encrypted.gpg",
                 encryptionKey.publicKey,
+                signingKey.secretKey,
+                signingKeyPass
+        );
+
+        // Create signature-only file
+        signFile(
+                "sample.txt",
+                "signed.sig",
                 signingKey.secretKey,
                 signingKeyPass
         );
