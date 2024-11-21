@@ -13,7 +13,7 @@ import java.util.Iterator;
 
 public class PGPAnalyzer {
 
-    private static Logger logger = LoggerFactory.getLogger(PGPAnalyzer.class);
+    private static final Logger logger = LoggerFactory.getLogger(PGPAnalyzer.class);
 
     public static void main(String[] args) {
         if (args.length < 1) {

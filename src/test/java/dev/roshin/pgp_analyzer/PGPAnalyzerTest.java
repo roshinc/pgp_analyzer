@@ -4,9 +4,6 @@ import org.junit.jupiter.api.Test;
 
 class PGPAnalyzerTest {
 
-    @Test
-    void main() {
-    }
 
     @Test
     void analyzeFile() {
